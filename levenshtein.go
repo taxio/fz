@@ -1,6 +1,6 @@
-package main
+package fz
 
-func calcLevenshteinDistance(s1, s2 string) (int, error) {
+func CalcLevenshteinDistance(s1, s2 string) (int, error) {
 	m := make([][]int, len(s1)+1)
 	for i := 0; i <= len(s1); i++ {
 		m[i] = make([]int, len(s2)+1)
