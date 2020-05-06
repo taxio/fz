@@ -10,12 +10,8 @@ func (l *LevenshteinDistance) Calculate(s1, s2 string) (int, error) {
 	m := make([][]int, len(s1)+1)
 	for i := 0; i <= len(s1); i++ {
 		m[i] = make([]int, len(s2)+1)
-	}
-
-	for i := 0; i <= len(s1); i++ {
 		m[i][0] = i
 	}
-
 	for j := 0; j <= len(s2); j++ {
 		m[0][j] = j
 	}

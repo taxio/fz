@@ -27,3 +27,9 @@ func SetAlignParam(gap, match, mismatch int) Option {
 		f.mismatch = mismatch
 	}
 }
+
+func SetMaxGoRoutine(n uint32) Option {
+	return func(f *FuzzyFinder) {
+		f.maxGoroutine = n
+	}
+}

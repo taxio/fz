@@ -1,6 +1,9 @@
 package fz
 
-import "sort"
+import (
+	"sort"
+	"sync"
+)
 
 type Candidate interface {
 	String() string
@@ -22,14 +25,19 @@ type FuzzyFinder struct {
 	gap      int
 	match    int
 	mismatch int
+
+	mu           *sync.Mutex
+	maxGoroutine uint32
 }
 
 func New() FuzzyFinder {
 	return FuzzyFinder{
-		alg:      AlgorithmLevenshtein,
-		gap:      2,
-		match:    2,
-		mismatch: 1,
+		alg:          AlgorithmLevenshtein,
+		gap:          2,
+		match:        2,
+		mismatch:     1,
+		mu:           &sync.Mutex{},
+		maxGoroutine: 1,
 	}
 }
 
@@ -57,15 +65,29 @@ func (f *FuzzyFinder) calcBaseScore(query string, cands []Candidate) (rets []Res
 		calc = NewLocalAlignmentCalculator(f.gap, f.match, f.mismatch)
 	}
 
+	limit := make(chan struct{}, f.maxGoroutine)
+	wg := sync.WaitGroup{}
 	for _, c := range cands {
-		score, err := calc.Calculate(query, c.String())
-		if err != nil {
-			return nil, err
-		}
-		rets = append(rets, Result{
-			Cand:  c,
-			Score: score,
-		})
+		wg.Add(1)
+		go func(query string, cand Candidate) {
+			limit <- struct{}{}
+			defer wg.Done()
+			score, gErr := calc.Calculate(query, cand.String())
+			if gErr != nil {
+				err = gErr
+			}
+			f.mu.Lock()
+			rets = append(rets, Result{
+				Cand:  cand,
+				Score: score,
+			})
+			f.mu.Unlock()
+			<-limit
+		}(query, c)
+	}
+	wg.Wait()
+	if err != nil {
+		return nil, err
 	}
 
 	if f.alg == AlgorithmLevenshtein {
